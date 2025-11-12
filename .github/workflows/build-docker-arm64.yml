@@ -1,0 +1,174 @@
+# Build and publish the RCC Docker image for arm64 targets (e.g. Jetson)
+
+name: Build RCC Docker Image (arm64)
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  LOCAL_IMAGE: radio-container
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+      actions: read
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Normalize image name
+      id: image-name
+      run: |
+        IMAGE_NAME="${{ env.IMAGE_NAME }}"
+        LOWER_IMAGE=$(echo "$IMAGE_NAME" | tr '[:upper:]' '[:lower:]')
+        echo "image=$LOWER_IMAGE" >> "$GITHUB_OUTPUT"
+
+    - name: Log in to Container Registry
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ steps.image-name.outputs.image }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}
+          type=raw,value=latest,enable={{is_default_branch}}
+          type=sha
+
+    - name: Build and push Docker image
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: ./rcc
+        platforms: linux/arm64
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Pull image locally for SBOM
+      if: github.event_name != 'pull_request'
+      run: |
+        echo "Pulling image for SBOM generation..."
+        docker pull --platform linux/arm64 ${{ env.REGISTRY }}/${{ steps.image-name.outputs.image }}@${{ steps.build.outputs.digest }}
+        docker tag ${{ env.REGISTRY }}/${{ steps.image-name.outputs.image }}@${{ steps.build.outputs.digest }} ${{ env.LOCAL_IMAGE }}:local-arm64
+
+    - name: Generate SBOM using Syft
+      if: github.event_name != 'pull_request'
+      continue-on-error: true
+      run: |
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+        syft packages docker-image:${{ env.LOCAL_IMAGE }}:local-arm64 -o spdx-json > sbom-arm64.spdx.json || {
+          echo "Failed to analyze local image, falling back to registry"
+          syft packages registry:${{ env.REGISTRY }}/${{ steps.image-name.outputs.image }}@${{ steps.build.outputs.digest }} \
+            --registry-username ${{ github.actor }} \
+            --registry-password ${{ secrets.GITHUB_TOKEN }} \
+            -o spdx-json > sbom-arm64.spdx.json || {
+            echo "SBOM generation failed, creating minimal SBOM"
+            echo '{"spdxVersion":"SPDX-2.3","dataLicense":"CC0-1.0","SPDXID":"SPDXRef-DOCUMENT","name":"radio-container","documentNamespace":"https://github.com/${{ github.repository }}/sbom","packages":[]}' > sbom-arm64.spdx.json
+          }
+        }
+
+    - name: Upload SBOM
+      if: github.event_name != 'pull_request'
+      continue-on-error: true
+      uses: actions/upload-artifact@v4
+      with:
+        name: sbom-arm64
+        path: sbom-arm64.spdx.json
+        retention-days: 30
+        if-no-files-found: warn
+
+    - name: Run Trivy vulnerability scanner
+      if: github.event_name != 'pull_request'
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ steps.image-name.outputs.image }}@${{ steps.build.outputs.digest }}
+        format: 'sarif'
+        output: 'trivy-arm64.sarif'
+
+    - name: Upload Trivy scan results
+      if: github.event_name != 'pull_request'
+      continue-on-error: true
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: 'trivy-arm64.sarif'
+
+  smoke-test:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event_name != 'pull_request'
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup QEMU
+      uses: docker/setup-qemu-action@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build image for testing
+      uses: docker/build-push-action@v5
+      with:
+        context: ./rcc
+        platforms: linux/arm64
+        push: false
+        load: true
+        tags: ${{ env.LOCAL_IMAGE }}:test-arm64
+
+    - name: Run smoke tests
+      run: |
+        docker run -d --name rcc-test-arm64 --platform linux/arm64 \
+          -p 8080:8080 \
+          ${{ env.LOCAL_IMAGE }}:test-arm64
+
+        echo "Waiting for container to become healthy..."
+        for i in {1..30}; do
+          if curl -sf http://127.0.0.1:8080/api/v1/health > /dev/null 2>&1; then
+            echo "Container is healthy"
+            break
+          fi
+          if [ $i -eq 30 ]; then
+            echo "Container failed health check"
+            docker logs rcc-test-arm64
+            exit 1
+          fi
+          sleep 2
+        done
+
+        curl -sf http://127.0.0.1:8080/api/v1/health | head -n1
+
+        docker stop rcc-test-arm64 || true
+        docker rm rcc-test-arm64 || true

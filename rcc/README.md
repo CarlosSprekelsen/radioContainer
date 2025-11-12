@@ -4,7 +4,7 @@ Radio Control Container implementation following IEEE 42010 + arc42 architecture
 
 ## Architecture
 
-See `docs/radio_control_container_ieee_42010_arc_42_architecture_draft_v1.md` for complete architecture documentation.
+See `../docs/radio_control_container_architecture_v1.md` for complete architecture documentation.
 
 ## Components
 

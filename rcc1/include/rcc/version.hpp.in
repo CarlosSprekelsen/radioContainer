@@ -1,0 +1,31 @@
+#pragma once
+
+#include <string>
+
+namespace rcc {
+
+inline std::string_view version() noexcept {
+    return "@PROJECT_VERSION@";
+}
+
+inline std::string_view git_revision() noexcept {
+    return "@RCC_GIT_VERSION@";
+}
+
+inline std::string_view build_timestamp() noexcept {
+    return "@RCC_BUILD_TIME@";
+}
+
+}  // namespace rcc
+
+#pragma once
+
+#include <string_view>
+
+namespace rcc {
+inline constexpr std::string_view kVersion = "@PROJECT_VERSION@";
+inline constexpr std::string_view kGitVersion = "@RCC_GIT_VERSION@";
+inline constexpr std::string_view kBuildTimestamp = "@RCC_BUILD_TIME@";
+}  // namespace rcc
+
+
