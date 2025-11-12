@@ -1,0 +1,18 @@
+# Contract Version
+# This file pins the exact version of API contracts used by E2E tests
+
+SPEC_VERSION=v1.0.0
+COMMIT_HASH=2fd948f4dd3220445b30f6269a1f54a9f4126326
+LAST_UPDATED=2025-10-03T11:30:00Z
+
+# OpenAPI Specification
+OPENAPI_VERSION=1.0.0
+OPENAPI_FILE=openapi.yaml
+
+# Telemetry SSE Schema
+TELEMETRY_SCHEMA_VERSION=1.0.0
+TELEMETRY_SCHEMA_FILE=telemetry.schema.json
+
+# Error Mapping
+ERROR_MAPPING_VERSION=1.0.0
+ERROR_MAPPING_FILE=error-mapping.json

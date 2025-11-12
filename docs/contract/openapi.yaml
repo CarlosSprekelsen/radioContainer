@@ -1,0 +1,533 @@
+openapi: 3.0.3
+info:
+  title: Radio Control Container API
+  description: Minimal, stable contract for selecting a radio, setting channel and power, and receiving telemetry.
+  version: 1.0.0
+  contact:
+    name: Radio Control Container Team
+servers:
+  - url: http://localhost:8080
+    description: Development server
+paths:
+  /api/v1/health:
+    get:
+      summary: Health check endpoint
+      description: Returns the health status of the service
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /api/v1/capabilities:
+    get:
+      summary: Get system capabilities
+      description: Returns the capabilities of the radio control system
+      operationId: getCapabilities
+      responses:
+        '200':
+          description: Capabilities retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                result: "ok"
+                data:
+                  telemetry: ["sse"]
+                  commands: ["http-json"]
+                  version: "1.0.0"
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/radios:
+    get:
+      summary: List available radios
+      description: Returns a list of all available radio devices
+      operationId: listRadios
+      responses:
+        '200':
+          description: Radios retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                result: "ok"
+                data:
+                  - id: "silvus-001"
+                    name: "Silvus Radio 1"
+                    status: "available"
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/radios/select:
+    post:
+      summary: Select active radio
+      description: Selects a radio as the active radio for operations
+      operationId: selectRadio
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - radioId
+              properties:
+                radioId:
+                  type: string
+                  description: ID of the radio to select
+                  example: "silvus-001"
+      responses:
+        '200':
+          description: Radio selected successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Radio not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/radios/{id}:
+    get:
+      summary: Get radio details
+      description: Returns details for a specific radio
+      operationId: getRadio
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Radio ID
+          example: "silvus-001"
+      responses:
+        '200':
+          description: Radio details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid radio ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Radio not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/radios/{id}/power:
+    get:
+      summary: Get radio power level
+      description: Returns the current power level of the radio
+      operationId: getRadioPower
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Radio ID
+          example: "silvus-001"
+      responses:
+        '200':
+          description: Power level retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                result: "ok"
+                data:
+                  powerDbm: 25.0
+        '400':
+          description: Invalid radio ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Radio not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Set radio power level
+      description: Sets the power level of the radio
+      operationId: setRadioPower
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Radio ID
+          example: "silvus-001"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - powerDbm
+              properties:
+                powerDbm:
+                  type: number
+                  format: float
+                  minimum: -50
+                  maximum: 50
+                  description: Power level in dBm
+                  example: 25.0
+      responses:
+        '200':
+          description: Power level set successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid power level or radio ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Radio not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service unavailable or busy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/radios/{id}/channel:
+    get:
+      summary: Get radio channel/frequency
+      description: Returns the current channel/frequency of the radio
+      operationId: getRadioChannel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Radio ID
+          example: "silvus-001"
+      responses:
+        '200':
+          description: Channel retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                result: "ok"
+                data:
+                  channelIndex: 1
+                  frequencyMhz: 2400.0
+        '400':
+          description: Invalid radio ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Radio not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Set radio channel/frequency
+      description: Sets the channel/frequency of the radio
+      operationId: setRadioChannel
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Radio ID
+          example: "silvus-001"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - frequencyMhz
+              properties:
+                channelIndex:
+                  type: integer
+                  minimum: 1
+                  maximum: 16
+                  description: Channel index (1-16)
+                  example: 1
+                frequencyMhz:
+                  type: number
+                  format: float
+                  minimum: 100
+                  maximum: 6000
+                  description: Frequency in MHz
+                  example: 2400.0
+      responses:
+        '200':
+          description: Channel set successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid channel/frequency or radio ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Radio not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Service unavailable or busy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/telemetry:
+    get:
+      summary: Telemetry stream
+      description: Server-Sent Events stream for real-time telemetry data
+      operationId: getTelemetry
+      responses:
+        '200':
+          description: Telemetry stream established
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                description: SSE stream with telemetry events
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    SuccessResponse:
+      type: object
+      required:
+        - result
+        - data
+      properties:
+        result:
+          type: string
+          enum: ["ok"]
+          description: Result status
+        data:
+          type: object
+          description: Response data
+        correlationId:
+          type: string
+          description: Correlation ID for request tracking
+    ErrorResponse:
+      type: object
+      required:
+        - result
+        - code
+        - message
+      properties:
+        result:
+          type: string
+          enum: ["error"]
+          description: Result status
+        code:
+          type: string
+          description: Error code
+          enum: ["INVALID_RANGE", "UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND", "BUSY", "UNAVAILABLE", "INTERNAL"]
+        message:
+          type: string
+          description: Error message
+        details:
+          type: object
+          description: Additional error details
+        correlationId:
+          type: string
+          description: Correlation ID for request tracking
+    HealthResponse:
+      type: object
+      required:
+        - result
+        - data
+      properties:
+        result:
+          type: string
+          enum: ["ok"]
+        data:
+          type: object
+          properties:
+            status:
+              type: string
+              enum: ["healthy"]
+            timestamp:
+              type: string
+              format: date-time
+        correlationId:
+          type: string
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+security:
+  - bearerAuth: []

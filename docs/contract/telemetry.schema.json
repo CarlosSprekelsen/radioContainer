@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Radio Control Container Telemetry SSE Events",
+  "version": "1.0.0",
+  "description": "JSON Schema for Server-Sent Events in Radio Control Container",
+  
+  "definitions": {
+    "baseEvent": {
+      "type": "object",
+      "required": ["id", "event", "data"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Monotonic event ID per radio"
+        },
+        "event": {
+          "type": "string",
+          "description": "Event type"
+        },
+        "data": {
+          "type": "object",
+          "description": "Event payload"
+        }
+      }
+    },
+    
+    "readyEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/baseEvent" },
+        {
+          "properties": {
+            "event": { "const": "ready" },
+            "data": {
+              "type": "object",
+              "required": ["snapshot"],
+              "properties": {
+                "snapshot": {
+                  "type": "object",
+                  "required": ["activeRadioId", "radios"],
+                  "properties": {
+                    "activeRadioId": { "type": "string" },
+                    "radios": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["id", "status"],
+                        "properties": {
+                          "id": { "type": "string" },
+                          "status": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    
+    "heartbeatEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/baseEvent" },
+        {
+          "properties": {
+            "event": { "const": "heartbeat" },
+            "data": {
+              "type": "object",
+              "required": ["timestamp"],
+              "properties": {
+                "timestamp": { "type": "string", "format": "date-time" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    
+    "powerChangedEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/baseEvent" },
+        {
+          "properties": {
+            "event": { "const": "powerChanged" },
+            "data": {
+              "type": "object",
+              "required": ["radioId", "powerDbm", "ts"],
+              "properties": {
+                "radioId": { "type": "string" },
+                "powerDbm": { "type": "number" },
+                "ts": { "type": "string", "format": "date-time" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    
+    "channelChangedEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/baseEvent" },
+        {
+          "properties": {
+            "event": { "const": "channelChanged" },
+            "data": {
+              "type": "object",
+              "required": ["radioId", "channelIndex", "frequencyMhz", "ts"],
+              "properties": {
+                "radioId": { "type": "string" },
+                "channelIndex": { "type": "integer" },
+                "frequencyMhz": { "type": "number" },
+                "ts": { "type": "string", "format": "date-time" }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  
+  "oneOf": [
+    { "$ref": "#/definitions/readyEvent" },
+    { "$ref": "#/definitions/heartbeatEvent" },
+    { "$ref": "#/definitions/powerChangedEvent" },
+    { "$ref": "#/definitions/channelChangedEvent" }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "correlationId": "test-correlation-id-12345",
+  "data": {
+    "activeRadioId": "",
+    "items": []
+  },
+  "result": "ok"
+}

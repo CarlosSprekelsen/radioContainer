@@ -1,0 +1,50 @@
+{
+  "version": "1.0.0",
+  "description": "Error code to HTTP status mapping for Radio Control Container API",
+  "mappings": [
+    {
+      "adapter_error": "BAD_REQUEST",
+      "http_status": 400,
+      "description": "Malformed request: JSON parse error, unknown fields, or trailing data"
+    },
+    {
+      "adapter_error": "INVALID_RANGE",
+      "http_status": 400,
+      "description": "Parameter value outside valid range"
+    },
+    {
+      "adapter_error": "BUSY",
+      "http_status": 503,
+      "description": "Adapter is busy and cannot process request"
+    },
+    {
+      "adapter_error": "UNAVAILABLE",
+      "http_status": 503,
+      "description": "Adapter is unavailable"
+    },
+    {
+      "adapter_error": "INTERNAL",
+      "http_status": 500,
+      "description": "Internal server error"
+    },
+    {
+      "adapter_error": "NOT_FOUND",
+      "http_status": 404,
+      "description": "Resource not found"
+    },
+    {
+      "adapter_error": "UNAUTHORIZED",
+      "http_status": 401,
+      "description": "Authentication required"
+    },
+    {
+      "adapter_error": "FORBIDDEN",
+      "http_status": 403,
+      "description": "Insufficient permissions"
+    }
+  ],
+  "default_mapping": {
+    "http_status": 500,
+    "description": "Unknown error"
+  }
+}
